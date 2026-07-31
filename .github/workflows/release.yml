@@ -1,46 +1,141 @@
 name: Release Plugin
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-  build:
-    name: Build Plugin ZIP
+  validate-and-package:
+    name: Validate & Package
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set plugin version from tag
+      - name: Extract version from tag
+        id: tag
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           VERSION=${TAG#v}
-          echo "PLUGIN_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "Building version $VERSION"
+          echo "tag_version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Tag: $TAG → Version: $VERSION"
+
+      - name: Validate plugin version matches tag
+        id: validate
+        run: |
+          PLUGIN_VERSION=$(grep -E '^\s*\*\s*Version:\s+' aurafact-woocommerce.php | sed 's/.*Version:\s*//' | sed 's/\s*\*\/\?//')
+          TAG_VERSION="${{ steps.tag.outputs.tag_version }}"
+          echo "Plugin version: '$PLUGIN_VERSION'"
+          echo "Tag version:    '$TAG_VERSION'"
+          if [ "$PLUGIN_VERSION" != "$TAG_VERSION" ]; then
+            echo "❌ ERROR: Plugin version ($PLUGIN_VERSION) does not match tag version ($TAG_VERSION)"
+            exit 1
+          fi
+          echo "✅ Plugin version matches tag"
+          echo "version=$PLUGIN_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git tag --sort=-creatordate | head -n 2 | tail -n 1 || echo "")
+          echo "Previous tag: '$PREVIOUS_TAG'"
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            CHANGELOG="## What's Changed\\n\\nInitial release of Aurafact WooCommerce."
+          else
+            CHANGELOG="## What's Changed\\n\\n"
+            while IFS= read -r line; do
+              TYPE=""
+              MSG=$(echo "$line" | sed 's/^[a-f0-9]*\s*//')
+              if echo "$MSG" | grep -qiE '^feat\b|^feature\b|^add\b|^implement\b|^nuevo\b|^añad'; then
+                TYPE="🚀 Added"
+              elif echo "$MSG" | grep -qiE '^fix\b|^bug\b|^corregir\b|^arregl'; then
+                TYPE="🐛 Fixed"
+              elif echo "$MSG" | grep -qiE '^change\b|^update\b|^actualiz|^mejora'; then
+                TYPE="🔄 Changed"
+              elif echo "$MSG" | grep -qiE '^security\b|^seguridad'; then
+                TYPE="🔒 Security"
+              else
+                TYPE="📦 Other"
+              fi
+              CHANGELOG="${CHANGELOG}- ${TYPE}: ${MSG}\\n"
+            done < <(git log "$PREVIOUS_TAG..HEAD" --oneline --no-decorate 2>/dev/null || git log --oneline --no-decorate)
+          fi
+
+          CHANGELOG="${CHANGELOG}\\n\\n**Full Changelog**: https://github.com/aurafact/aurafact-woocommerce/compare/${PREVIOUS_TAG}...${{ steps.tag.outputs.tag }}"
+          echo "notes=$CHANGELOG" >> $GITHUB_OUTPUT
 
       - name: Create plugin directory structure
         run: |
           mkdir -p build/aurafact-woocommerce
-          rsync -av --exclude='.git' \
+          rsync -av \
+            --exclude='.git' \
             --exclude='.github' \
             --exclude='build' \
             --exclude='.gitignore' \
-            --exclude='*.md' \
+            --exclude='.editorconfig' \
+            --exclude='.prettierrc' \
+            --exclude='eslint.config.mjs' \
+            --exclude='jest.config.js' \
+            --exclude='jest.setup.js' \
+            --exclude='jest-authcontext-report.json' \
+            --exclude='lint-output.txt' \
+            --exclude='next.config.ts' \
+            --exclude='next-env.d.ts' \
+            --exclude='tsconfig.json' \
+            --exclude='postcss.config.mjs' \
+            --exclude='components.json' \
+            --exclude='pnpm-lock.yaml' \
+            --exclude='pnpm-workspace.yaml' \
+            --exclude='package.json' \
+            --exclude='Dockerfile.prod' \
+            --exclude='deploy-prod.sh' \
+            --exclude='.dockerignore' \
+            --exclude='.env*' \
+            --exclude='README.md' \
+            --exclude='README_IMPLEMENTACION.md' \
+            --exclude='README_MINKA.md' \
+            --exclude='PLAN_INTEGRACION_CLIENTES.md' \
+            --exclude='docs/' \
+            --exclude='src/' \
+            --exclude='public/' \
+            --exclude='.vscode/' \
             ./ build/aurafact-woocommerce/
+
+      - name: Verify plugin structure
+        run: |
+          echo "=== Plugin structure ==="
+          find build/aurafact-woocommerce -type f | sort
+          echo ""
+          echo "=== File count ==="
+          find build/aurafact-woocommerce -type f | wc -l
 
       - name: Build plugin ZIP
         run: |
           cd build
-          zip -r ../aurafact-woocommerce-${{ env.PLUGIN_VERSION }}.zip aurafact-woocommerce/
+          ZIP_NAME="aurafact-woocommerce-${{ steps.validate.outputs.version }}.zip"
+          zip -r "../$ZIP_NAME" aurafact-woocommerce/
+          echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
+          echo "Created: $ZIP_NAME"
+          unzip -l "../$ZIP_NAME" | head -30
 
-      - name: Upload ZIP to release
-        uses: actions/upload-release-asset@v1
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Aurafact WooCommerce ${{ steps.validate.outputs.version }}
+          body: |
+            ${{ steps.changelog.outputs.notes }}
+          files: |
+            ./aurafact-woocommerce-${{ steps.validate.outputs.version }}.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./aurafact-woocommerce-${{ env.PLUGIN_VERSION }}.zip
-          asset_name: aurafact-woocommerce-${{ env.PLUGIN_VERSION }}.zip
-          asset_content_type: application/zip
