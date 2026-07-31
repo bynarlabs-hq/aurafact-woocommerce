@@ -1,0 +1,179 @@
+# Copyright (C) 2026 Aurafact
+# This file is distributed under the GPL v3 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Aurafact WooCommerce 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/aurafact/aurafact-woocommerce/issues\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-07-30T00:00:00+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: Aurafact WooCommerce 1.0.0\n"
+"X-Domain: aurafact-woocommerce\n"
+
+#: aurafact-woocommerce.php:60
+msgid "Aurafact WooCommerce requiere WooCommerce instalado y activo."
+msgstr ""
+
+#: aurafact-woocommerce.php:61
+msgid "Error de activación"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:107
+msgid "Aurafact"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:130
+msgid "Configuración Aurafact"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:131
+msgid "Configura la integración de tu tienda WooCommerce con Aurafact para facturación electrónica ecuatoriana."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:137
+msgid "API Key"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:139
+msgid "Tu clave de API de Aurafact. Se almacena de forma segura."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:144
+msgid "Ambiente"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:147
+msgid "Sandbox (Pruebas)"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:148
+msgid "Producción"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:150
+msgid "Selecciona Sandbox para pruebas o Producción para facturación real."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:156
+msgid "Evento de emisión"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:159
+msgid "Al completar el pedido"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:160
+msgid "Al procesar el pedido"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:162
+msgid "Define en qué momento del flujo de pedidos se emitirá la factura electrónica."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:168
+msgid "Depuración"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:170
+msgid "Habilitar registro de depuración (log)"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:191
+msgid "Prueba de conexión"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:192
+msgid "Verifica que tu API Key sea válida y que el plugin pueda comunicarse con Aurafact."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:199
+msgid "Probar conexión"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:212
+msgid "Estado del sistema"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:217
+msgid "Plugin Aurafact"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:221
+msgid "WooCommerce"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:225
+msgid "WordPress"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:229
+msgid "PHP"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:233
+msgid "Conectividad Aurafact"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:235
+msgid "Pendiente"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:268
+msgid "La API Key contiene caracteres no válidos."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:378
+msgid "Probando conexión..."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:379
+msgid "Conexión exitosa"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:380
+msgid "Error de conexión"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:381
+msgid "No hay API Key configurada"
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:395
+msgid "Error de seguridad. Recarga la página e intenta de nuevo."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:400
+msgid "No tienes permisos para realizar esta acción."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:405
+msgid "Configura una API Key primero."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:433
+msgid "Conexión exitosa con Aurafact."
+msgstr ""
+
+#: includes/class-aurafact-admin-settings.php:442
+msgid "Error HTTP %d"
+msgstr ""
+
+#: includes/class-aurafact-updater.php:237
+msgid "Aurafact WooCommerce integra tu tienda WooCommerce con Aurafact para emitir facturación electrónica ecuatoriana compatible con el SRI. Los comprobantes se generan automáticamente al completar un pedido y quedan disponibles para descarga por parte del cliente."
+msgstr ""
+
+#: includes/class-aurafact-updater.php:268
+msgid "Configuración"
+msgstr ""
+
+#: includes/class-aurafact-updater.php:271
+msgid "Repositorio"
+msgstr ""
+
+#: includes/class-aurafact-updater.php:274
+msgid "Documentación"
+msgstr ""

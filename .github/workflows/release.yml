@@ -1,0 +1,46 @@
+name: Release Plugin
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build Plugin ZIP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set plugin version from tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "PLUGIN_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Building version $VERSION"
+
+      - name: Create plugin directory structure
+        run: |
+          mkdir -p build/aurafact-woocommerce
+          rsync -av --exclude='.git' \
+            --exclude='.github' \
+            --exclude='build' \
+            --exclude='.gitignore' \
+            --exclude='*.md' \
+            ./ build/aurafact-woocommerce/
+
+      - name: Build plugin ZIP
+        run: |
+          cd build
+          zip -r ../aurafact-woocommerce-${{ env.PLUGIN_VERSION }}.zip aurafact-woocommerce/
+
+      - name: Upload ZIP to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./aurafact-woocommerce-${{ env.PLUGIN_VERSION }}.zip
+          asset_name: aurafact-woocommerce-${{ env.PLUGIN_VERSION }}.zip
+          asset_content_type: application/zip
