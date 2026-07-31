@@ -178,6 +178,10 @@ function aurafact_wc_init() {
 		$updater = \Aurafact\WooCommerce\Updater::get_instance();
 		$updater->init();
 	}
+
+	// Inicializar checkout (frontend y admin).
+	$checkout = \Aurafact\WooCommerce\Checkout::get_instance();
+	$checkout->init();
 }
 
 add_action( 'plugins_loaded', 'aurafact_wc_init' );

@@ -177,3 +177,101 @@ msgstr ""
 #: includes/class-aurafact-updater.php:274
 msgid "Documentación"
 msgstr ""
+
+# === Checkout & Validación Fiscal ===
+
+#: includes/class-aurafact-checkout.php:78
+msgid "Tipo de identificación"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:87
+msgid "Selecciona un tipo"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:88
+msgid "RUC"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:89
+msgid "Cédula"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:90
+msgid "Pasaporte"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:91
+msgid "Consumidor Final"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:96
+msgid "Número de identificación"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:105
+msgid "Razón social"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:135
+msgid "Selecciona un tipo de identificación."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:155
+msgid "La razón social es obligatoria para RUC."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:162
+msgid "El pasaporte debe tener al menos 5 caracteres."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:169
+msgid "Consumidor Final debe usar el número 9999999999999."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:177
+msgid "Tipo de identificación no válido."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:192
+msgid "El número de cédula debe tener 10 dígitos numéricos."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:200
+msgid "El número de cédula no es válido (código de provincia incorrecto)."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:217
+msgid "El número de cédula ingresado no es válido."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:230
+msgid "El RUC ingresado no es válido. Debe tener 13 dígitos."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:238
+msgid "El RUC no es válido (código de provincia incorrecto)."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:246
+msgid "El RUC no es válido (los últimos 3 dígitos deben ser 001)."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:264
+msgid "El RUC ingresado no es válido."
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:286
+msgid "Datos fiscales (Aurafact)"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:289
+msgid "Tipo:"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:293
+msgid "Número:"
+msgstr ""
+
+#: includes/class-aurafact-checkout.php:304
+msgid "Razón social:"
+msgstr ""
