@@ -186,6 +186,10 @@ function aurafact_wc_init() {
 	// Inicializar manejador de órdenes (emisión automática).
 	$order_handler = \Aurafact\WooCommerce\OrderHandler::get_instance();
 	$order_handler->init();
+
+	// Inicializar metabox, thank-you, emails y shortcode.
+	$metabox = \Aurafact\WooCommerce\Metabox::get_instance();
+	$metabox->init();
 }
 
 add_action( 'plugins_loaded', 'aurafact_wc_init' );

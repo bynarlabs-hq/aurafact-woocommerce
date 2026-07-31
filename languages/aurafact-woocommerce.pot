@@ -375,3 +375,165 @@ msgstr ""
 #: includes/class-aurafact-order-handler.php:389
 msgid "Descargar XML"
 msgstr ""
+
+# === Metabox, Thank You, Emails & Shortcode ===
+
+#: includes/class-aurafact-metabox.php:76
+msgid "Factura Electrónica Aurafact"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:97
+msgid "Orden no encontrada."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:143
+msgid "Esta orden no tiene factura electrónica asociada."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:148
+msgid "Emitir factura ahora"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:162
+msgid "Número:"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:168
+msgid "Clave de Acceso:"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:175
+msgid "📄 Descargar RIDE (PDF)"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:181
+msgid "📎 Descargar XML"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:189
+msgid "🔄 Reintentar facturación"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:194
+msgid "Último error:"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:203
+msgid "Reintentos: %d"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:211
+msgid "La factura está siendo procesada. El estado se actualizará automáticamente."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:221
+msgid "Emitiendo..."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:239
+msgid "Reintentar facturación"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:242
+msgid "Error de conexión. Intenta de nuevo."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:268
+msgid "Error desconocido. Revisa las notas de la orden."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:283
+msgid "Error de seguridad. Recarga la página."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:287
+msgid "No tienes permisos para realizar esta acción."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:295
+msgid "Orden no encontrada."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:313
+msgid "Facturación iniciada correctamente."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:316
+msgid "No se pudo emitir la factura. Revisa las notas de la orden."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:339
+msgid "Factura Electrónica"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:340
+msgid "Tu factura electrónica ya está disponible. Puedes descargarla desde los siguientes enlaces:"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:344
+msgid "Descargar Factura Electrónica (PDF)"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:349
+msgid "Descargar XML"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:393
+msgid "FACTURA ELECTRÓNICA"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:394
+msgid "Tu factura electrónica ya está disponible:"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:396
+msgid "PDF:"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:398
+msgid "XML:"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:406
+msgid "Tu factura electrónica ya está disponible. Descárgala aquí:"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:411
+msgid "Descargar PDF"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:416
+msgid "Descargar XML"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:440
+msgid "Debes iniciar sesión para ver tus facturas."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:462
+msgid "Orden no encontrada o no tienes permisos para verla."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:476
+msgid "No tienes órdenes con factura electrónica."
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:498
+msgid "Factura - Orden #%s"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:502
+msgid "Documento:"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:505
+msgid "Clave de acceso:"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:512
+msgid "Descargar PDF"
+msgstr ""
+
+#: includes/class-aurafact-metabox.php:516
+msgid "Descargar XML"
+msgstr ""
