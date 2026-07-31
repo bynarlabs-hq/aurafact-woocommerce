@@ -275,3 +275,103 @@ msgstr ""
 #: includes/class-aurafact-checkout.php:304
 msgid "Razón social:"
 msgstr ""
+
+# === Cliente API Aurafact ===
+
+#: includes/class-aurafact-api-client.php:76
+msgid "API Key no configurada."
+msgstr ""
+
+#: includes/class-aurafact-api-client.php:182
+msgid "Error HTTP %d"
+msgstr ""
+
+#: includes/class-aurafact-api-client.php:208
+msgid "Orden %d no encontrada."
+msgstr ""
+
+#: includes/class-aurafact-api-client.php:340
+msgid "Gastos de envío - %s"
+msgstr ""
+
+#: includes/class-aurafact-api-client.php:477
+msgid "ID de documento no proporcionado."
+msgstr ""
+
+# === Manejador de Órdenes (Emisión) ===
+
+#: includes/class-aurafact-order-handler.php:72
+msgid "Cada 5 minutos"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:124
+msgid "Aurafact: La orden no tiene datos fiscales completos. No se pudo emitir la factura."
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:186
+msgid "Aurafact: Factura emitida correctamente. Documento: %s | Estado: %s"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:213
+msgid "Aurafact: Error al emitir factura: %1$s (Intento %2$d de %3$d)"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:311
+msgid "Aurafact: Factura autorizada por el SRI. Clave de acceso: %s"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:320
+msgid "Sin motivo especificado"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:324
+msgid "Aurafact: Factura rechazada por el SRI. Motivo: %s"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:352
+msgid "En procesamiento"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:353
+msgid "Autorizado"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:354
+msgid "Rechazado"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:355
+msgid "Error"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:363
+msgid "Facturación Aurafact"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:366
+msgid "Estado:"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:374
+msgid "Documento:"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:377
+msgid "Clave de acceso:"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:380
+msgid "Fecha de emisión:"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:383
+msgid "ID interno:"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:386
+msgid "Ver RIDE (PDF)"
+msgstr ""
+
+#: includes/class-aurafact-order-handler.php:389
+msgid "Descargar XML"
+msgstr ""

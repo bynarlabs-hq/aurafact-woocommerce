@@ -182,6 +182,10 @@ function aurafact_wc_init() {
 	// Inicializar checkout (frontend y admin).
 	$checkout = \Aurafact\WooCommerce\Checkout::get_instance();
 	$checkout->init();
+
+	// Inicializar manejador de órdenes (emisión automática).
+	$order_handler = \Aurafact\WooCommerce\OrderHandler::get_instance();
+	$order_handler->init();
 }
 
 add_action( 'plugins_loaded', 'aurafact_wc_init' );
