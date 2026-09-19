@@ -39,9 +39,16 @@ define( 'AURAFACT_WC_VERSION', '1.0.0' );
 define( 'AURAFACT_WC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AURAFACT_WC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'AURAFACT_WC_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-define( 'AURAFACT_WC_API_URL', 'https://api.aurafact.com' );
-define( 'AURAFACT_WC_API_SANDBOX_URL', 'https://api.sandbox.aurafact.com' );
 define( 'AURAFACT_WC_DB_OPTION_PREFIX', 'aurafact_wc_' );
+
+// URLs de la API: se pueden sobreescribir desde wp-config.php.
+// Útil para desarrollo local: define('AURAFACT_WC_API_SANDBOX_URL', 'http://host.docker.internal:8080');
+if ( ! defined( 'AURAFACT_WC_API_URL' ) ) {
+	define( 'AURAFACT_WC_API_URL', 'https://api.aurafact.com' );
+}
+if ( ! defined( 'AURAFACT_WC_API_SANDBOX_URL' ) ) {
+	define( 'AURAFACT_WC_API_SANDBOX_URL', 'https://api.sandbox.aurafact.com' );
+}
 
 // ---------------------------------------------------------------------------
 // Hooks de activación y desactivación
