@@ -38,7 +38,7 @@ class ApiClient {
 	 */
 	const ENDPOINT_INVOICES   = '/api/v1/invoices';
 	const ENDPOINT_DOCUMENTS  = '/api/v1/documents';
-	const ENDPOINT_HEALTH     = '/api/v1/health';
+	const ENDPOINT_HEALTH     = '/api/v1/documents?limit=1';
 
 	/**
 	 * Timeout de conexión en segundos.
@@ -255,15 +255,10 @@ class ApiClient {
 			'NumeroOrden' => (string) $order->get_id(),
 		);
 
-		// Secuencial: usar timestamp como placeholder (el plugin real usaría
-		// la secuencia configurada en Aurafact, pero por ahora generamos uno).
-		$secuencial = str_pad( (string) ( $order->get_id() % 999999999 ), 9, '0', STR_PAD_LEFT );
-
 		$payload = array(
+			'tipoDocumento'   => '01',
 			'establecimiento' => '001',
 			'puntoEmision'    => '002',
-			'secuencial'      => $secuencial,
-			'fechaEmision'    => gmdate( 'Y-m-d' ),
 			'cliente'         => $cliente,
 			'items'           => $items,
 			'formasPago'      => $formas_pago,
