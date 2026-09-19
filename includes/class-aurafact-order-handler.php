@@ -80,16 +80,30 @@ class OrderHandler {
 		// Cron para consultar estado de documentos pendientes.
 		add_action( 'aurafact_wc_poll_document_status', array( $this, 'poll_pending_documents' ) );
 
-		// Asegurar que el cron esté programado.
-		if ( ! wp_next_scheduled( 'aurafact_wc_poll_document_status' ) ) {
-			wp_schedule_event( time(), 'every_five_minutes', 'aurafact_wc_poll_document_status' );
-		}
-
 		// Agregar intervalo de 5 minutos a los schedules de WP.
 		add_filter( 'cron_schedules', array( $this, 'add_cron_interval' ) );
 
 		// Mostrar metadatos de emisión en el admin de la orden.
 		add_action( 'woocommerce_admin_order_data_after_order_details', array( $this, 'display_emission_meta' ), 10, 1 );
+
+		// Programar cron en init (no en plugins_loaded) para evitar el notice
+		// _load_textdomain_just_in_time: wp_schedule_event() dispara el filtro
+		// cron_schedules, y WC 7.1.1 carga perezosamente su text domain ahí.
+		add_action( 'init', array( $this, 'schedule_poll_cron' ) );
+	}
+
+	/**
+	 * Registra el cron de polling de documentos en Aurafact.
+	 *
+	 * @author Fabian Silva <fabian.silva@consulti.ec>
+	 * @version 1.0
+	 *
+	 * @return void
+	 */
+	public function schedule_poll_cron() {
+		if ( ! wp_next_scheduled( 'aurafact_wc_poll_document_status' ) ) {
+			wp_schedule_event( time(), 'every_five_minutes', 'aurafact_wc_poll_document_status' );
+		}
 	}
 
 	/**
