@@ -138,8 +138,9 @@ function aurafact_wc_autoload( $class ) {
 
 	$relative_class = substr( $class, $len );
 
-	// Convertir nombre de clase a formato de archivo: ClassName -> class-class-name.php.
-	$file_name = 'class-' . str_replace( '_', '-', strtolower( preg_replace( '/([a-z])([A-Z])/', '$1-$2', $relative_class ) ) ) . '.php';
+	// Convertir nombre de clase a formato de archivo: ClassName -> class-aurafact-class-name.php.
+	// Convención definida en STORY_701: prefijo "aurafact-" en los nombres de archivo.
+	$file_name = 'class-aurafact-' . str_replace( '_', '-', strtolower( preg_replace( '/([a-z])([A-Z])/', '$1-$2', $relative_class ) ) ) . '.php';
 
 	$file = AURAFACT_WC_PLUGIN_DIR . 'includes/' . $file_name;
 
@@ -155,6 +156,25 @@ spl_autoload_register( 'aurafact_wc_autoload' );
 // ---------------------------------------------------------------------------
 
 /**
+ * Carga el text domain del plugin en el hook init (>= WP 6.7).
+ *
+ * Cargar el text domain en plugins_loaded dispara el notice
+ * _load_textdomain_just_in_time. WordPress recomienda usar init o posterior.
+ *
+ * @author Fabian Silva <fabian.silva@consulti.ec>
+ * @version 1.0
+ *
+ * @return void
+ */
+function aurafact_wc_load_textdomain() {
+	load_plugin_textdomain(
+		'aurafact-woocommerce',
+		false,
+		dirname( AURAFACT_WC_PLUGIN_BASENAME ) . '/languages'
+	);
+}
+
+/**
  * Inicializa el plugin una vez que todos los plugins están cargados.
  *
  * @author Fabian Silva <fabian.silva@consulti.ec>
@@ -163,13 +183,6 @@ spl_autoload_register( 'aurafact_wc_autoload' );
  * @return void
  */
 function aurafact_wc_init() {
-	// Cargar traducciones.
-	load_plugin_textdomain(
-		'aurafact-woocommerce',
-		false,
-		dirname( AURAFACT_WC_PLUGIN_BASENAME ) . '/languages'
-	);
-
 	// Inicializar clases principales.
 	if ( is_admin() ) {
 		$admin_settings = \Aurafact\WooCommerce\AdminSettings::get_instance();
@@ -192,4 +205,5 @@ function aurafact_wc_init() {
 	$metabox->init();
 }
 
+add_action( 'init', 'aurafact_wc_load_textdomain' );
 add_action( 'plugins_loaded', 'aurafact_wc_init' );
