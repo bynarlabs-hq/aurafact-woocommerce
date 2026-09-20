@@ -339,10 +339,16 @@ class Checkout {
     }
 
     /**
-     * Valida una cédula ecuatoriana (módulo 10).
+     * Valida una cédula ecuatoriana.
+     *
+     * Modos disponibles (configurados en admin):
+     * - `format_only` (default): solo valida formato (10 dígitos + provincia válida).
+     * - `algorithm`: aplica módulo 10 (puede rechazar cédulas emitidas antes del 2000).
+     * - `disabled`: no valida nada.
      *
      * @author Fabian Silva <fabian.silva@consulti.ec>
-     * @version 1.1.0
+     * @author Aurafact Team
+     * @version 1.1.5
      *
      * @param string   $doc_number Número de cédula.
      * @param callable $add_error  Callback para agregar errores.
@@ -350,17 +356,32 @@ class Checkout {
      * @return void
      */
     private function validate_cedula( $doc_number, $add_error ) {
+        $mode = get_option( 'aurafact_wc_cedula_validation_mode', 'format_only' );
+
+        // Validación de formato (siempre se ejecuta).
         if ( 10 !== strlen( $doc_number ) || ! ctype_digit( $doc_number ) ) {
-            $add_error( 'aurafact_invalid_cedula_length', __( 'El número de cédula debe tener 10 dígitos numéricos.', 'aurafact-woocommerce' ) );
+            $add_error( 'aurafact_invalid_cedula_length', __( 'La cédula debe tener 10 dígitos numéricos.', 'aurafact-woocommerce' ) );
             return;
         }
 
         $provincia = (int) substr( $doc_number, 0, 2 );
         if ( $provincia < 1 || $provincia > 24 ) {
-            $add_error( 'aurafact_invalid_cedula_province', __( 'El número de cédula no es válido (código de provincia incorrecto).', 'aurafact-woocommerce' ) );
+            $add_error( 'aurafact_invalid_cedula_province', __( 'El código de provincia de la cédula no es válido (debe ser 01-24).', 'aurafact-woocommerce' ) );
             return;
         }
 
+        if ( 'disabled' === $mode ) {
+            return;
+        }
+
+        if ( 'format_only' === $mode ) {
+            // Modo recomendado: solo formato.
+            return;
+        }
+
+        // mode === 'algorithm': aplicar módulo 10.
+        // ADVERTENCIA: este algoritmo puede rechazar cédulas emitidas antes del 2000
+        // o con errores de transcripción del SRI.
         $coeficientes = array( 2, 1, 2, 1, 2, 1, 2, 1, 2 );
         $suma         = 0;
 
@@ -376,15 +397,22 @@ class Checkout {
         $digito_calculado   = ( 10 - ( $suma % 10 ) ) % 10;
 
         if ( $digito_verificador !== $digito_calculado ) {
-            $add_error( 'aurafact_invalid_cedula', __( 'El número de cédula ingresado no es válido.', 'aurafact-woocommerce' ) );
+            $add_error( 'aurafact_invalid_cedula', __( 'La cédula no pasa la validación algorítmica. Si es una cédula real, cambia "Validación de Cédula" a "Solo formato" en la configuración.', 'aurafact-woocommerce' ) );
         }
     }
 
     /**
-     * Valida un RUC ecuatoriano (módulo 11).
+     * Valida un RUC ecuatoriano.
+     *
+     * Modos disponibles (configurados en admin):
+     * - `format_only` (default): solo valida formato (13 dígitos + provincia válida).
+     *   No rechaza RUCs reales de sociedades públicas/privadas.
+     * - `algorithm`: aplica módulo 11 (puede rechazar RUCs válidos de otros tipos).
+     * - `disabled`: no valida nada.
      *
      * @author Fabian Silva <fabian.silva@consulti.ec>
-     * @version 1.1.0
+     * @author Aurafact Team
+     * @version 1.1.4
      *
      * @param string   $doc_number Número de RUC.
      * @param callable $add_error  Callback para agregar errores.
@@ -392,20 +420,36 @@ class Checkout {
      * @return void
      */
     private function validate_ruc( $doc_number, $add_error ) {
+        $mode = get_option( 'aurafact_wc_ruc_validation_mode', 'format_only' );
+
+        // Validación de formato (siempre se ejecuta).
         if ( 13 !== strlen( $doc_number ) || ! ctype_digit( $doc_number ) ) {
-            $add_error( 'aurafact_invalid_ruc_length', __( 'El RUC ingresado no es válido. Debe tener 13 dígitos.', 'aurafact-woocommerce' ) );
+            $add_error( 'aurafact_invalid_ruc_length', __( 'El RUC debe tener 13 dígitos numéricos.', 'aurafact-woocommerce' ) );
             return;
         }
 
         $provincia = (int) substr( $doc_number, 0, 2 );
         if ( $provincia < 1 || $provincia > 24 ) {
-            $add_error( 'aurafact_invalid_ruc_province', __( 'El RUC no es válido (código de provincia incorrecto).', 'aurafact-woocommerce' ) );
+            $add_error( 'aurafact_invalid_ruc_province', __( 'El código de provincia del RUC no es válido (debe ser 01-24).', 'aurafact-woocommerce' ) );
             return;
         }
 
+        if ( 'disabled' === $mode ) {
+            return;
+        }
+
+        if ( 'format_only' === $mode ) {
+            // Modo recomendado: solo formato. No rechazamos RUCs por algoritmo.
+            return;
+        }
+
+        // mode === 'algorithm': aplicar módulo 11.
+        // ADVERTENCIA: este algoritmo solo es válido para RUCs de persona natural
+        // (3er dígito 0-5 + sufijo 001). Rechazará RUCs válidos de sociedades privadas
+        // (3er dígito 9) y entidades públicas (3er dígito 6).
         $sufijo = substr( $doc_number, -3 );
         if ( '001' !== $sufijo ) {
-            $add_error( 'aurafact_invalid_ruc_suffix', __( 'El RUC no es válido (los últimos 3 dígitos deben ser 001).', 'aurafact-woocommerce' ) );
+            $add_error( 'aurafact_invalid_ruc_suffix', __( 'El RUC no es válido (los últimos 3 dígitos deben ser 001 para persona natural).', 'aurafact-woocommerce' ) );
             return;
         }
 
@@ -425,7 +469,7 @@ class Checkout {
         }
 
         if ( $digito_verificador !== $digito_calculado ) {
-            $add_error( 'aurafact_invalid_ruc', __( 'El RUC ingresado no es válido.', 'aurafact-woocommerce' ) );
+            $add_error( 'aurafact_invalid_ruc', __( 'El RUC no pasa la validación algorítmica. Si es un RUC real de sociedad, cambia "Validación de RUC" a "Solo formato" en la configuración.', 'aurafact-woocommerce' ) );
         }
     }
 

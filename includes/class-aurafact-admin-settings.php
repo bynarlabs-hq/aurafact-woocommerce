@@ -164,6 +164,32 @@ class AdminSettings {
 				'desc_tip' => true,
 				'default'  => CountryFilter::MODE_EC_ONLY,
 			),
+			'ruc_validation_mode' => array(
+				'name'     => __( 'Validación de RUC', 'aurafact-woocommerce' ),
+				'type'     => 'select',
+				'options'  => array(
+					'format_only' => __( 'Solo formato (recomendado)', 'aurafact-woocommerce' ),
+					'algorithm'   => __( 'Algoritmo módulo 11 (puede rechazar RUCs válidos)', 'aurafact-woocommerce' ),
+					'disabled'    => __( 'Sin validación (no recomendado)', 'aurafact-woocommerce' ),
+				),
+				'desc'     => __( 'Solo formato valida 13 dígitos numéricos + provincia. Algoritmo aplica módulo 11 (puede rechazar RUCs de sociedades).', 'aurafact-woocommerce' ),
+				'id'       => 'aurafact_wc_ruc_validation_mode',
+				'desc_tip' => true,
+				'default'  => 'format_only',
+			),
+			'cedula_validation_mode' => array(
+				'name'     => __( 'Validación de Cédula', 'aurafact-woocommerce' ),
+				'type'     => 'select',
+				'options'  => array(
+					'format_only' => __( 'Solo formato (recomendado)', 'aurafact-woocommerce' ),
+					'algorithm'   => __( 'Algoritmo módulo 10 (puede rechazar cédulas antiguas)', 'aurafact-woocommerce' ),
+					'disabled'    => __( 'Sin validación (no recomendado)', 'aurafact-woocommerce' ),
+				),
+				'desc'     => __( 'Solo formato valida 10 dígitos numéricos + provincia. Algoritmo aplica módulo 10 (puede rechazar cédulas emitidas antes del 2000).', 'aurafact-woocommerce' ),
+				'id'       => 'aurafact_wc_cedula_validation_mode',
+				'desc_tip' => true,
+				'default'  => 'format_only',
+			),
 			'debug_mode' => array(
 				'name'     => __( 'Depuración', 'aurafact-woocommerce' ),
 				'type'     => 'checkbox',
