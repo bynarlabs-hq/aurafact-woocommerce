@@ -143,13 +143,26 @@ class AdminSettings {
 				'name'     => __( 'Evento de emisión', 'aurafact-woocommerce' ),
 				'type'     => 'select',
 				'options'  => array(
-					'completed' => __( 'Al completar el pedido', 'aurafact-woocommerce' ),
-					'processing' => __( 'Al procesar el pedido', 'aurafact-woocommerce' ),
+					'completed'     => __( 'Al completar el pedido', 'aurafact-woocommerce' ),
+					'processing'    => __( 'Al procesar el pedido', 'aurafact-woocommerce' ),
+					'order_created' => __( 'Al crear la orden (recomendado para pagos offline)', 'aurafact-woocommerce' ),
 				),
-				'desc'     => __( 'Define en qué momento del flujo de pedidos se emitirá la factura electrónica.', 'aurafact-woocommerce' ),
+				'desc'     => __( 'Define en qué momento del flujo de pedidos se emitirá la factura. Para pagos offline (transferencia, contra reembolso) usa "Al crear la orden".', 'aurafact-woocommerce' ),
 				'id'       => 'aurafact_wc_emission_event',
 				'desc_tip' => true,
-				'default'  => 'completed',
+				'default'  => 'order_created',
+			),
+			'country_restriction' => array(
+				'name'     => __( 'Cobertura de facturación', 'aurafact-woocommerce' ),
+				'type'     => 'select',
+				'options'  => array(
+					CountryFilter::MODE_EC_ONLY => __( 'Solo Ecuador', 'aurafact-woocommerce' ),
+					CountryFilter::MODE_ALL     => __( 'Todos los países', 'aurafact-woocommerce' ),
+				),
+				'desc'     => __( 'Solo Ecuador: los campos fiscales solo aparecen si el cliente selecciona Ecuador como país. Todos los países: los campos aparecen siempre.', 'aurafact-woocommerce' ),
+				'id'       => 'aurafact_wc_country_restriction',
+				'desc_tip' => true,
+				'default'  => CountryFilter::MODE_EC_ONLY,
 			),
 			'debug_mode' => array(
 				'name'     => __( 'Depuración', 'aurafact-woocommerce' ),
@@ -426,7 +439,7 @@ class AdminSettings {
 			wp_send_json_error( array( 'message' => __( 'Configura una API Key primero.', 'aurafact-woocommerce' ) ) );
 		}
 
-		$api_url = $this->get_api_base_url() . '/api/v1/health';
+		$api_url = $this->get_api_base_url() . '/v1/health';
 
 		$response = wp_remote_get(
 			$api_url,

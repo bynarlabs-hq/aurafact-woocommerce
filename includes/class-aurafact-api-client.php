@@ -36,9 +36,15 @@ class ApiClient {
 	/**
 	 * Endpoints de la API.
 	 */
-	const ENDPOINT_INVOICES   = '/api/v1/invoices';
-	const ENDPOINT_DOCUMENTS  = '/api/v1/documents';
-	const ENDPOINT_HEALTH     = '/api/v1/documents?limit=1';
+	const ENDPOINT_INVOICES   = '/v1/invoices';
+	const ENDPOINT_DOCUMENTS  = '/v1/documents';
+	const ENDPOINT_HEALTH     = '/v1/health';
+
+	/**
+	 * Versión mínima del contrato de la API que el plugin espera.
+	 * Se valida contra la cabecera X-Aurafact-API-Version de la respuesta.
+	 */
+	const MIN_API_VERSION = '1.0.0';
 
 	/**
 	 * Timeout de conexión en segundos.
@@ -94,7 +100,7 @@ class ApiClient {
 	 * @version 1.0
 	 *
 	 * @param string $method  Método HTTP (GET, POST).
-	 * @param string $path    Ruta del endpoint (ej: /api/v1/invoices).
+	 * @param string $path    Ruta del endpoint (ej: /v1/invoices).
 	 * @param array  $body    Cuerpo de la petición (para POST).
 	 *
 	 * @return array Respuesta con keys: success, data, error.
@@ -152,6 +158,12 @@ class ApiClient {
 
 		$settings->log( sprintf( 'API Response %d: %s', $status_code, substr( $response_body, 0, 500 ) ) );
 
+		// Validar versión del contrato de la API contra X-Aurafact-API-Version.
+		$api_version = wp_remote_retrieve_header( $response, 'x-aurafact-api-version' );
+		if ( ! empty( $api_version ) ) {
+			$this->validar_version_api( $api_version );
+		}
+
 		if ( $status_code >= 200 && $status_code < 300 ) {
 			return array(
 				'success' => true,
@@ -187,7 +199,7 @@ class ApiClient {
 	 * Emite una factura electrónica a partir de una orden de WooCommerce.
 	 *
 	 * Construye el payload completo según el contrato PublicInvoiceRequest
-	 * y lo envía a POST /api/v1/invoices.
+	 * y lo envía a POST /v1/invoices.
 	 *
 	 * @author Fabian Silva <fabian.silva@consulti.ec>
 	 * @version 1.0
@@ -231,7 +243,7 @@ class ApiClient {
 	 *
 	 * @param \WC_Order $order Objeto de la orden de WooCommerce.
 	 *
-	 * @return array Payload para POST /api/v1/invoices.
+	 * @return array Payload para POST /v1/invoices.
 	 */
 	public function build_invoice_payload( $order ) {
 		$settings = $this->get_settings();
@@ -279,9 +291,9 @@ class ApiClient {
 	 * @return array ClienteInfo.
 	 */
 	private function build_cliente_info( $order ) {
-		$doc_type   = $order->get_meta( '_billing_doc_type' );
-		$doc_number = $order->get_meta( '_billing_doc_number' );
-		$business_name = $order->get_meta( '_billing_business_name' );
+		$doc_type      = Compat::get_field_value( $order, 'doc_type' );
+		$doc_number    = Compat::get_field_value( $order, 'doc_number' );
+		$business_name = Compat::get_field_value( $order, 'business_name' );
 
 		// Razón social: preferir el metadato fiscal, o el nombre completo.
 		$razon_social = ! empty( $business_name )
@@ -324,7 +336,8 @@ class ApiClient {
 		foreach ( $order->get_items() as $item ) {
 			$product = $item->get_product();
 
-			$codigo_principal = $item->get_sku();
+			// get_sku() es del producto, no del item.
+			$codigo_principal = $product ? $product->get_sku() : '';
 			if ( empty( $codigo_principal ) && $product ) {
 				$codigo_principal = (string) $product->get_id();
 			}
@@ -613,5 +626,26 @@ class ApiClient {
 	 */
 	public function get_ultimo_error() {
 		return $this->last_error;
+	}
+
+	/**
+	 * Valida la versión del contrato de la API reportada por el backend.
+	 *
+	 * @author Aurafact Team
+	 * @version 1.1.1
+	 *
+	 * @param string $api_version Versión reportada por X-Aurafact-API-Version.
+	 *
+	 * @return void
+	 */
+	private function validar_version_api( $api_version ) {
+		if ( version_compare( $api_version, self::MIN_API_VERSION, '<' ) ) {
+			$this->last_error = sprintf(
+				/* translators: 1: versión reportada, 2: versión mínima requerida */
+				__( 'Versión de API incompatible: el servidor reporta %1$s pero el plugin requiere %2$s o superior.', 'aurafact-woocommerce' ),
+				$api_version,
+				self::MIN_API_VERSION
+			);
+		}
 	}
 }

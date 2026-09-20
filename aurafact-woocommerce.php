@@ -1,24 +1,22 @@
 <?php
 /**
- * Aurafact WooCommerce
- *
- * @package           AurafactWooCommerce
- * @author            Aurafact
- * @license           GPL v3 or later
- *
- * @wordpress-plugin
  * Plugin Name:       Aurafact WooCommerce
  * Plugin URI:        https://aurafact.com/woocommerce
  * Description:       Facturación electrónica ecuatoriana para WooCommerce. Conecta tu tienda con Aurafact y cumple con el SRI.
- * Version:           1.0.0
+ * Version:           1.1.3
+ * Requires at least: 6.0
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
+ * WC requires at least: 7.1
+ * WC tested up to:   11.1
  * Author:            Aurafact
  * Author URI:        https://aurafact.com
  * License:           GPL v3 or later
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain:       aurafact-woocommerce
  * Domain Path:       /languages
+ *
+ * @package AurafactWooCommerce
  */
 
 /**
@@ -30,6 +28,38 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+// ---------------------------------------------------------------------------
+// Declaración de compatibilidad con WooCommerce features
+// ---------------------------------------------------------------------------
+
+/**
+ * Declara compatibilidad con WooCommerce High-Performance Order Storage (HPOS)
+ * y otras features de WC. Sin esto, WC muestra warnings de incompatibilidad
+ * desde la versión 8.x.
+ *
+ * @see https://developer.woocommerce.com/docs/hpos-extension-recipes/
+ */
+add_action(
+	'before_woocommerce_init',
+	function () {
+		if ( ! class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
+			return;
+		}
+
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+			'custom_order_tables',
+			__FILE__,
+			true
+		);
+
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+			'orders_cache',
+			__FILE__,
+			true
+		);
+	}
+);
 
 // ---------------------------------------------------------------------------
 // Constantes de definición

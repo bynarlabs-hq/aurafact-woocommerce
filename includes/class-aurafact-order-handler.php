@@ -73,9 +73,14 @@ class OrderHandler {
 	 * @return void
 	 */
 	public function init() {
-		// Hook dinámico según configuración.
-		add_action( 'woocommerce_order_status_completed', array( $this, 'on_order_status_change' ), 10, 2 );
-		add_action( 'woocommerce_order_status_processing', array( $this, 'on_order_status_change' ), 10, 2 );
+		// Hook dinámico según configuración: cambio de estado o creación de orden.
+		$trigger = AdminSettings::get_instance()->get_emission_event();
+		if ( 'order_created' === $trigger ) {
+			add_action( 'woocommerce_checkout_order_created', array( $this, 'on_order_created' ), 20, 1 );
+		} else {
+			add_action( 'woocommerce_order_status_completed', array( $this, 'on_order_status_change' ), 10, 2 );
+			add_action( 'woocommerce_order_status_processing', array( $this, 'on_order_status_change' ), 10, 2 );
+		}
 
 		// Cron para consultar estado de documentos pendientes.
 		add_action( 'aurafact_wc_poll_document_status', array( $this, 'poll_pending_documents' ) );
@@ -90,6 +95,29 @@ class OrderHandler {
 		// _load_textdomain_just_in_time: wp_schedule_event() dispara el filtro
 		// cron_schedules, y WC 7.1.1 carga perezosamente su text domain ahí.
 		add_action( 'init', array( $this, 'schedule_poll_cron' ) );
+	}
+
+	/**
+	 * Manejador para el evento "Al crear la orden" (woocommerce_checkout_order_created).
+	 *
+	 * Útil para pagos offline (transferencia, contra reembolso) que dejan la orden
+	 * en estado "on-hold" o "pending" y nunca disparan los hooks de status change.
+	 *
+	 * @author Aurafact Team
+	 * @version 1.1.1
+	 *
+	 * @param \WC_Order $order Objeto de la orden recién creada.
+	 *
+	 * @return void
+	 */
+	public function on_order_created( $order ) {
+		if ( ! $order instanceof \WC_Order ) {
+			return;
+		}
+
+		// Emitir inmediatamente al crear la orden (sin importar status).
+		// Útil para pagos offline que dejan la orden en on-hold/pending.
+		$this->try_emit( $order->get_id(), $order );
 	}
 
 	/**
@@ -156,9 +184,36 @@ class OrderHandler {
 			return;
 		}
 
-		// Verificar datos fiscales.
-		$doc_type   = $order->get_meta( '_billing_doc_type' );
-		$doc_number = $order->get_meta( '_billing_doc_number' );
+		$this->try_emit( $order_id, $order );
+	}
+
+	/**
+	 * Lógica común de emisión (extracción para reutilización).
+	 *
+	 * @author Aurafact Team
+	 * @version 1.1.1
+	 *
+	 * @param int       $order_id ID de la orden.
+	 * @param \WC_Order $order    Objeto de la orden.
+	 *
+	 * @return void
+	 */
+	private function try_emit( $order_id, $order ) {
+		// Verificar país: si la cobertura es EC_ONLY y el país no es Ecuador, skip.
+		if ( ! CountryFilter::should_emit_for_order( $order ) ) {
+			$order->add_order_note(
+				sprintf(
+					/* translators: %s: país de facturación de la orden */
+					__( 'Aurafact: Orden desde %s omitida por filtro de cobertura geográfica.', 'aurafact-woocommerce' ),
+					$order->get_billing_country() ?: 'N/A'
+				)
+			);
+			return;
+		}
+
+		// Verificar datos fiscales (acceso unificado legacy/blocks).
+		$doc_type   = Compat::get_field_value( $order, 'doc_type' );
+		$doc_number = Compat::get_field_value( $order, 'doc_number' );
 
 		if ( empty( $doc_type ) || empty( $doc_number ) ) {
 			$order->add_order_note(
@@ -218,7 +273,8 @@ class OrderHandler {
 		$result = $api_client->emitir_factura( $order_id );
 
 		if ( $result['success'] ) {
-			$data = $result['data'];
+			// El backend retorna {status, data: {id, secuencial, ...}}. Extraer data anidada.
+			$data = isset( $result['data']['data'] ) ? $result['data']['data'] : array();
 			$settings = AdminSettings::get_instance();
 
 			// Guardar metadatos de la emisión.
