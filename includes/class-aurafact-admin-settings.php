@@ -143,14 +143,15 @@ class AdminSettings {
 				'name'     => __( 'Evento de emisión', 'aurafact-woocommerce' ),
 				'type'     => 'select',
 				'options'  => array(
-					'completed'     => __( 'Al completar el pedido', 'aurafact-woocommerce' ),
-					'processing'    => __( 'Al procesar el pedido', 'aurafact-woocommerce' ),
-					'order_created' => __( 'Al crear la orden (recomendado para pagos offline)', 'aurafact-woocommerce' ),
+					'order_confirmed' => __( 'Al confirmar pago (processing + completed)', 'aurafact-woocommerce' ),
+					'order_created'   => __( 'Al crear la orden (pagos offline)', 'aurafact-woocommerce' ),
+					'order_completed' => __( 'Solo al completar', 'aurafact-woocommerce' ),
+					'order_processing' => __( 'Solo al procesar', 'aurafact-woocommerce' ),
 				),
-				'desc'     => __( 'Define en qué momento del flujo de pedidos se emitirá la factura. Para pagos offline (transferencia, contra reembolso) usa "Al crear la orden".', 'aurafact-woocommerce' ),
+				'desc'     => __( '"Al confirmar pago" escucha processing Y completed (recomendado). El plugin evita doble emisión automáticamente.', 'aurafact-woocommerce' ),
 				'id'       => 'aurafact_wc_emission_event',
 				'desc_tip' => true,
-				'default'  => 'order_created',
+				'default'  => 'order_confirmed',
 			),
 			'country_restriction' => array(
 				'name'     => __( 'Cobertura de facturación', 'aurafact-woocommerce' ),
@@ -164,6 +165,11 @@ class AdminSettings {
 				'desc_tip' => true,
 				'default'  => CountryFilter::MODE_EC_ONLY,
 			),
+			/*
+			 * TODO: Revertir este comentario cuando se corrija el algoritmo de validación.
+			 * Por ahora se fuerza 'format_only' internamente para evitar rechazos de
+			 * RUCs/cédulas válidos.
+			 *
 			'ruc_validation_mode' => array(
 				'name'     => __( 'Validación de RUC', 'aurafact-woocommerce' ),
 				'type'     => 'select',
@@ -190,6 +196,7 @@ class AdminSettings {
 				'desc_tip' => true,
 				'default'  => 'format_only',
 			),
+			*/
 			'debug_mode' => array(
 				'name'     => __( 'Depuración', 'aurafact-woocommerce' ),
 				'type'     => 'checkbox',

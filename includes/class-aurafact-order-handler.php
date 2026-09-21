@@ -75,15 +75,33 @@ class OrderHandler {
 	public function init() {
 		// Hook dinámico según configuración: cambio de estado o creación de orden.
 		$trigger = AdminSettings::get_instance()->get_emission_event();
-		if ( 'order_created' === $trigger ) {
-			add_action( 'woocommerce_checkout_order_created', array( $this, 'on_order_created' ), 20, 1 );
-		} else {
-			add_action( 'woocommerce_order_status_completed', array( $this, 'on_order_status_change' ), 10, 2 );
-			add_action( 'woocommerce_order_status_processing', array( $this, 'on_order_status_change' ), 10, 2 );
+
+		switch ( $trigger ) {
+			case 'order_created':
+				add_action( 'woocommerce_checkout_order_created', array( $this, 'on_order_created' ), 20, 1 );
+				break;
+			case 'order_confirmed':
+				add_action( 'woocommerce_order_status_processing', array( $this, 'on_order_status_change' ), 10, 2 );
+				add_action( 'woocommerce_order_status_completed', array( $this, 'on_order_status_change' ), 10, 2 );
+				break;
+			case 'order_processing':
+				add_action( 'woocommerce_order_status_processing', array( $this, 'on_order_status_change' ), 10, 2 );
+				break;
+			case 'order_completed':
+				add_action( 'woocommerce_order_status_completed', array( $this, 'on_order_status_change' ), 10, 2 );
+				break;
+			default:
+				add_action( 'woocommerce_order_status_processing', array( $this, 'on_order_status_change' ), 10, 2 );
+				add_action( 'woocommerce_order_status_completed', array( $this, 'on_order_status_change' ), 10, 2 );
+				break;
 		}
 
 		// Cron para consultar estado de documentos pendientes.
 		add_action( 'aurafact_wc_poll_document_status', array( $this, 'poll_pending_documents' ) );
+
+		// Cron de respaldo: emite facturas para órdenes sin emisión.
+		// Cubre el caso de bulk actions que no disparan hooks en WC + HPOS.
+		add_action( 'aurafact_wc_emit_pending', array( $this, 'emit_pending_orders' ) );
 
 		// Agregar intervalo de 5 minutos a los schedules de WP.
 		add_filter( 'cron_schedules', array( $this, 'add_cron_interval' ) );
@@ -131,6 +149,9 @@ class OrderHandler {
 	public function schedule_poll_cron() {
 		if ( ! wp_next_scheduled( 'aurafact_wc_poll_document_status' ) ) {
 			wp_schedule_event( time(), 'every_five_minutes', 'aurafact_wc_poll_document_status' );
+		}
+		if ( ! wp_next_scheduled( 'aurafact_wc_emit_pending' ) ) {
+			wp_schedule_event( time() + 60, 'every_five_minutes', 'aurafact_wc_emit_pending' );
 		}
 	}
 
@@ -444,6 +465,91 @@ class OrderHandler {
 				$order_id,
 				$new_status
 			) );
+		}
+	}
+
+	/**
+	 * Cron de respaldo: busca órdenes en processing/completed sin emisión
+	 * y las emite automáticamente.
+	 *
+	 * Esto cubre el caso edge donde WC con HPOS no dispara los hooks de
+	 * order status durante bulk actions (bug conocido WC #5321).
+	 *
+	 * Protecciones:
+	 * - Lock distribuido (transient) para evitar ejecución concurrente.
+	 * - Batch de 10 órdenes por tick.
+	 * - Solo procesa órdenes con datos fiscales válidos.
+	 *
+	 * @author Aurafact Team
+	 * @version 1.1.8
+	 *
+	 * @return void
+	 */
+	public function emit_pending_orders() {
+		// Lock distribuido: evita que dos ticks corran simultáneamente.
+		$lock_key = 'aurafact_wc_emit_pending_lock';
+		if ( false !== get_transient( $lock_key ) ) {
+			return;
+		}
+		set_transient( $lock_key, time(), 60 ); // Lock de 60s.
+
+		$settings = AdminSettings::get_instance();
+
+		try {
+			// Buscar órdenes en processing|completed sin emisión o con error.
+			$orders = wc_get_orders(
+				array(
+					'status'    => array( 'processing', 'completed' ),
+					'limit'     => 10,
+					'orderby'   => 'date',
+					'order'     => 'ASC',  // Más antiguas primero.
+					'meta_query' => array(
+						'relation' => 'OR',
+						array(
+							'key'     => self::META_STATUS,
+							'compare' => 'NOT EXISTS',
+						),
+						array(
+							'key'     => self::META_STATUS,
+							'value'   => 'error',
+							'compare' => '=',
+						),
+					),
+				)
+			);
+
+			if ( empty( $orders ) ) {
+				return;
+			}
+
+			$settings->log(
+				sprintf(
+					'[emit_pending] Procesando %d órdenes pendientes',
+					count( $orders )
+				)
+			);
+
+			$processed = 0;
+			foreach ( $orders as $order ) {
+				if ( $processed >= 10 ) {
+					break;
+				}
+
+				// try_emit hace sus propias verificaciones (país, datos, idempotencia).
+				$this->try_emit( $order->get_id(), $order );
+				$processed++;
+			}
+
+			$settings->log(
+				sprintf(
+					'[emit_pending] Tick completado. Procesadas: %d, Restantes aprox: %s',
+					$processed,
+					max( 0, count( $orders ) - $processed )
+				)
+			);
+
+		} finally {
+			delete_transient( $lock_key );
 		}
 	}
 

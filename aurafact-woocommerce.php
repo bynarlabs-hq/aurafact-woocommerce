@@ -3,7 +3,7 @@
  * Plugin Name:       Aurafact WooCommerce
  * Plugin URI:        https://aurafact.com/woocommerce
  * Description:       Facturación electrónica ecuatoriana para WooCommerce. Conecta tu tienda con Aurafact y cumple con el SRI.
- * Version:           1.1.5
+ * Version:           1.1.8
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce

@@ -356,7 +356,8 @@ class Checkout {
      * @return void
      */
     private function validate_cedula( $doc_number, $add_error ) {
-        $mode = get_option( 'aurafact_wc_cedula_validation_mode', 'format_only' );
+        // TODO: cuando se corrija el algoritmo, leer de admin en lugar de forzar format_only.
+        $mode = 'format_only';
 
         // Validación de formato (siempre se ejecuta).
         if ( 10 !== strlen( $doc_number ) || ! ctype_digit( $doc_number ) ) {
@@ -420,7 +421,8 @@ class Checkout {
      * @return void
      */
     private function validate_ruc( $doc_number, $add_error ) {
-        $mode = get_option( 'aurafact_wc_ruc_validation_mode', 'format_only' );
+        // TODO: cuando se corrija el algoritmo, leer de admin en lugar de forzar format_only.
+        $mode = 'format_only';
 
         // Validación de formato (siempre se ejecuta).
         if ( 13 !== strlen( $doc_number ) || ! ctype_digit( $doc_number ) ) {
