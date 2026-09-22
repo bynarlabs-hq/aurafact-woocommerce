@@ -77,6 +77,12 @@ class AdminSettings {
 
 		// Invalidar cache del SriMapper cuando el admin guarda cambios de configuración.
 		add_action( 'woocommerce_update_options_aurafact', array( __NAMESPACE__ . '\\SriMapper', 'clear_cache' ) );
+
+		// Mostrar admin notice con el resultado del auto-setup de impuestos.
+		add_action( 'admin_notices', array( __NAMESPACE__ . '\\TaxSetup', 'maybe_render_notice' ) );
+
+		// AJAX: ejecutar auto-setup de impuestos manualmente.
+		add_action( 'wp_ajax_aurafact_wc_run_tax_setup', array( $this, 'ajax_run_tax_setup' ) );
 	}
 
 	/**
@@ -300,6 +306,14 @@ class AdminSettings {
 				>
 					<?php esc_html_e( 'Limpiar cache de parámetros SRI', 'aurafact-woocommerce' ); ?>
 				</button>
+				<button
+					type="button"
+					id="aurafact-wc-run-tax-setup"
+					class="button"
+					style="margin-left: 6px;"
+				>
+					<?php esc_html_e( 'Ejecutar auto-setup de impuestos ahora', 'aurafact-woocommerce' ); ?>
+				</button>
 				<span id="aurafact-wc-clear-cache-result" style="margin-left: 10px;"></span>
 			</p>
 		</div>
@@ -317,7 +331,25 @@ class AdminSettings {
 	 * @return void
 	 */
 	public function save_settings() {
+		// Usar string literal en vez de TaxSetup::OPTION_AUTO_SETUP para evitar
+		// dependencias de autoloading que puedan causar WSOD si la clase falla.
+		$option_key           = 'aurafact_wc_auto_setup_taxes';
+		$previous_auto_setup = get_option( $option_key );
+
 		woocommerce_update_options( $this->get_settings_fields() );
+
+		// Si el admin cambió el toggle "Auto-configurar impuestos", resetear flag DONE
+		// para que el próximo admin_init vuelva a ejecutarlo y muestre el notice.
+		$new_auto_setup = get_option( $option_key );
+		if ( $previous_auto_setup !== $new_auto_setup && class_exists( __NAMESPACE__ . '\\TaxSetup' ) ) {
+			try {
+				TaxSetup::reset_execution_flag();
+				TaxSetup::clear_result();
+			} catch ( \Throwable $e ) {
+				// No bloquear el guardado si falla el reset.
+				$this->log( 'No se pudo resetear el auto-setup de impuestos: ' . $e->getMessage() );
+			}
+		}
 
 		// Sanitización adicional del API Key.
 		if ( isset( $_POST['aurafact_wc_api_key'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
@@ -461,6 +493,7 @@ class AdminSettings {
 				'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
 				'nonce'          => wp_create_nonce( 'aurafact_wc_test_connection' ),
 				'clearCacheNonce' => wp_create_nonce( 'aurafact_wc_clear_sri_cache' ),
+				'runTaxSetupNonce' => wp_create_nonce( 'aurafact_wc_run_tax_setup' ),
 				'i18n'           => array(
 					'testing'       => __( 'Probando conexión...', 'aurafact-woocommerce' ),
 					'success'       => __( 'Conexión exitosa', 'aurafact-woocommerce' ),
@@ -469,6 +502,7 @@ class AdminSettings {
 					'clearing'      => __( 'Limpiando cache...', 'aurafact-woocommerce' ),
 					'cacheCleared'  => __( 'Cache limpiado', 'aurafact-woocommerce' ),
 					'cacheError'    => __( 'Error al limpiar cache', 'aurafact-woocommerce' ),
+					'runningTax'    => __( 'Creando clases de impuestos...', 'aurafact-woocommerce' ),
 				),
 			)
 		);
@@ -565,5 +599,87 @@ class AdminSettings {
 		SriMapper::clear_cache();
 		$this->log( 'Cache de parámetros SRI limpiado por acción manual del admin.' );
 		wp_send_json_success( array( 'message' => __( 'Cache de parámetros SRI limpiado.', 'aurafact-woocommerce' ) ) );
+	}
+
+	/**
+	 * Maneja la solicitud AJAX para ejecutar el auto-setup de clases de impuestos.
+	 *
+	 * Resetea el flag DONE, ejecuta el setup y retorna el resultado para mostrarlo
+	 * en pantalla. Útil cuando el admin sospecha que el setup automático no corrió.
+	 *
+	 * @author Aurafact Team
+	 * @version 1.2.0
+	 *
+	 * @return void
+	 */
+	public function ajax_run_tax_setup() {
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'aurafact_wc_run_tax_setup' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Error de seguridad. Recarga la página e intenta de nuevo.', 'aurafact-woocommerce' ) ) );
+		}
+
+		if ( ! current_user_can( self::REQUIRED_CAPABILITY ) ) {
+			wp_send_json_error( array( 'message' => __( 'No tienes permisos para realizar esta acción.', 'aurafact-woocommerce' ) ) );
+		}
+
+		if ( ! class_exists( __NAMESPACE__ . '\\TaxSetup' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Clase TaxSetup no disponible.', 'aurafact-woocommerce' ) ) );
+		}
+
+		try {
+			// Habilitar el setting si no lo está (porque el admin está forzando).
+			update_option( 'aurafact_wc_auto_setup_taxes', 'yes' );
+
+			// Resetear flag DONE para forzar re-ejecución.
+			TaxSetup::reset_execution_flag();
+			TaxSetup::clear_result();
+
+			// Ejecutar.
+			$result = TaxSetup::force_run();
+
+			// Resetear flag "visto" para todos los admins.
+			global $wpdb;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete(
+				$wpdb->usermeta,
+				array( 'meta_key' => 'aurafact_wc_tax_setup_result_viewed' ),
+				array( '%s' )
+			);
+
+			$created = isset( $result['created'] ) ? $result['created'] : array();
+			$skipped = isset( $result['skipped'] ) ? $result['skipped'] : array();
+			$failed  = isset( $result['failed'] ) ? $result['failed'] : array();
+
+			$message_parts = array();
+			if ( ! empty( $created ) ) {
+				$message_parts[] = sprintf( __( 'Creadas: %s', 'aurafact-woocommerce' ), implode( ', ', $created ) );
+			}
+			if ( ! empty( $skipped ) ) {
+				$message_parts[] = sprintf( __( 'Ya existían: %s', 'aurafact-woocommerce' ), implode( ', ', $skipped ) );
+			}
+			if ( ! empty( $failed ) ) {
+				$message_parts[] = sprintf( __( 'Fallidas: %s', 'aurafact-woocommerce' ), implode( ', ', $failed ) );
+			}
+			if ( empty( $message_parts ) ) {
+				$message_parts[] = __( 'Nada que crear (todo OK)', 'aurafact-woocommerce' );
+			}
+
+			wp_send_json_success(
+				array(
+					'message' => implode( ' | ', $message_parts ),
+					'result'  => $result,
+				)
+			);
+		} catch ( \Throwable $e ) {
+			$this->log( 'Error en ajax_run_tax_setup: ' . $e->getMessage() );
+			wp_send_json_error(
+				array(
+					'message' => sprintf(
+						/* translators: %s: mensaje de error */
+						__( 'Error ejecutando auto-setup: %s', 'aurafact-woocommerce' ),
+						$e->getMessage()
+					),
+				)
+			);
+		}
 	}
 }

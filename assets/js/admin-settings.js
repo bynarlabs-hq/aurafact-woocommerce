@@ -125,6 +125,50 @@
 				});
 			});
 		}
+
+		var $runTaxSetupButton = $('#aurafact-wc-run-tax-setup');
+		if ($runTaxSetupButton.length) {
+			$runTaxSetupButton.on('click', function (e) {
+				e.preventDefault();
+				$runTaxSetupButton.prop('disabled', true);
+				$clearCacheResult.html(
+					'<span style="color: #666;">' +
+						(aurafactWcAdmin.i18n.runningTax || 'Creando clases...') +
+						'</span>'
+				);
+				$.ajax({
+					url: aurafactWcAdmin.ajaxUrl,
+					type: 'POST',
+					data: {
+						action: 'aurafact_wc_run_tax_setup',
+						nonce: aurafactWcAdmin.runTaxSetupNonce,
+					},
+					success: function (response) {
+						if (response.success) {
+							$clearCacheResult.html(
+								'<span style="color: #46b450; font-weight: bold;">✓ ' +
+									response.data.message +
+									'</span>'
+							);
+						} else {
+							$clearCacheResult.html(
+								'<span style="color: #dc3232; font-weight: bold;">✗ ' +
+									(response.data && response.data.message ? response.data.message : 'Error') +
+									'</span>'
+							);
+						}
+					},
+					error: function () {
+						$clearCacheResult.html(
+							'<span style="color: #dc3232; font-weight: bold;">✗ Error</span>'
+						);
+					},
+					complete: function () {
+						$runTaxSetupButton.prop('disabled', false);
+					},
+				});
+			});
+		}
 	}
 
 	$(document).ready(init);
