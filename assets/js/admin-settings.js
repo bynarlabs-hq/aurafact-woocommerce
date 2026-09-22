@@ -75,6 +75,56 @@
 				},
 			});
 		});
+
+		var $clearCacheButton = $('#aurafact-wc-clear-sri-cache');
+		var $clearCacheResult = $('#aurafact-wc-clear-cache-result');
+
+		if ($clearCacheButton.length) {
+			$clearCacheButton.on('click', function (e) {
+				e.preventDefault();
+
+				$clearCacheButton.prop('disabled', true);
+				$clearCacheResult.html(
+					'<span style="color: #666;">' +
+						aurafactWcAdmin.i18n.clearing +
+						'</span>'
+				);
+
+				$.ajax({
+					url: aurafactWcAdmin.ajaxUrl,
+					type: 'POST',
+					data: {
+						action: 'aurafact_wc_clear_sri_cache',
+						nonce: aurafactWcAdmin.clearCacheNonce,
+					},
+					success: function (response) {
+						if (response.success) {
+							$clearCacheResult.html(
+								'<span style="color: #46b450; font-weight: bold;">✓ ' +
+									aurafactWcAdmin.i18n.cacheCleared +
+									'</span>'
+							);
+						} else {
+							$clearCacheResult.html(
+								'<span style="color: #dc3232; font-weight: bold;">✗ ' +
+									(response.data && response.data.message ? response.data.message : aurafactWcAdmin.i18n.cacheError) +
+									'</span>'
+							);
+						}
+					},
+					error: function () {
+						$clearCacheResult.html(
+							'<span style="color: #dc3232; font-weight: bold;">✗ ' +
+								aurafactWcAdmin.i18n.cacheError +
+								'</span>'
+						);
+					},
+					complete: function () {
+						$clearCacheButton.prop('disabled', false);
+					},
+				});
+			});
+		}
 	}
 
 	$(document).ready(init);

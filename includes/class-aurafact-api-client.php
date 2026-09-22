@@ -323,8 +323,12 @@ class ApiClient {
 	 *
 	 * Incluye productos y gastos de envío.
 	 *
+	 * Soporta "precios con IVA incluido" (woocommerce_prices_include_tax = yes).
+	 * Cuando los precios incluyen IVA, el backend espera base imponible
+	 * (sin IVA), por lo que se descuenta el IVA del subtotal antes de enviarlo.
+	 *
 	 * @author Fabian Silva <fabian.silva@consulti.ec>
-	 * @version 1.0
+	 * @version 1.2.0
 	 *
 	 * @param \WC_Order $order Objeto de la orden.
 	 *
@@ -332,6 +336,8 @@ class ApiClient {
 	 */
 	private function build_items( $order ) {
 		$items = array();
+
+		$prices_include_tax = get_option( 'woocommerce_prices_include_tax' ) === 'yes';
 
 		foreach ( $order->get_items() as $item ) {
 			$product = $item->get_product();
@@ -345,14 +351,26 @@ class ApiClient {
 				$codigo_principal = 'PROD-' . $item->get_id();
 			}
 
-			$taxes = $this->get_item_tax_info( $item, $order );
+			$taxes    = $this->get_item_tax_info( $item, $order );
+			$quantity = max( 1, (float) $item->get_quantity() );
+
+			// Precio unitario: si los precios incluyen impuesto, hay que extraer
+			// la base imponible para que el backend calcule correctamente.
+			$subtotal = (float) $item->get_subtotal();
+			if ( $prices_include_tax && isset( $taxes['porcentaje'] ) && $taxes['porcentaje'] > 0 ) {
+				$tasa            = $taxes['porcentaje'] / 100;
+				$base_imponible  = $subtotal / ( 1 + $tasa );
+				$precio_unitario = $base_imponible / $quantity;
+			} else {
+				$precio_unitario = $subtotal / $quantity;
+			}
 
 			$items[] = array(
 				'codigoPrincipal' => $codigo_principal,
 				'codigoAuxiliar'  => null,
 				'descripcion'     => $item->get_name(),
 				'cantidad'        => (string) $item->get_quantity(),
-				'precioUnitario'  => wc_format_decimal( $item->get_subtotal() / $item->get_quantity(), 2 ),
+				'precioUnitario'  => wc_format_decimal( $precio_unitario, 2 ),
 				'descuento'       => wc_format_decimal( $item->get_subtotal() - $item->get_total(), 2 ),
 				'codigoImpuesto'  => $taxes['codigoImpuesto'],
 				'codigoTarifa'    => $taxes['codigoTarifa'],
@@ -362,7 +380,13 @@ class ApiClient {
 		// Agregar shipping como item adicional.
 		$shipping_total = (float) $order->get_shipping_total();
 		if ( $shipping_total > 0 ) {
-			$shipping_taxes = $this->get_shipping_tax_info( $order );
+			$shipping_taxes   = $this->get_shipping_tax_info( $order );
+			$shipping_unit    = $shipping_total;
+
+			if ( $prices_include_tax && isset( $shipping_taxes['porcentaje'] ) && $shipping_taxes['porcentaje'] > 0 ) {
+				$tasa_shipping    = $shipping_taxes['porcentaje'] / 100;
+				$shipping_unit    = $shipping_total / ( 1 + $tasa_shipping );
+			}
 
 			$items[] = array(
 				'codigoPrincipal' => 'SHIPPING',
@@ -373,7 +397,7 @@ class ApiClient {
 					$order->get_shipping_method()
 				),
 				'cantidad'        => '1',
-				'precioUnitario'  => wc_format_decimal( $shipping_total, 2 ),
+				'precioUnitario'  => wc_format_decimal( $shipping_unit, 2 ),
 				'descuento'       => '0.00',
 				'codigoImpuesto'  => $shipping_taxes['codigoImpuesto'],
 				'codigoTarifa'    => $shipping_taxes['codigoTarifa'],
@@ -386,98 +410,157 @@ class ApiClient {
 	/**
 	 * Obtiene la información de impuestos de un item.
 	 *
-	 * Mapea las tasas de WooCommerce a los códigos de Aurafact (SRI).
+	 * Mapea las tasas de WooCommerce a los códigos de Aurafact (SRI) consultando
+	 * el catálogo del backend vía {@see SriMapper}. Si la tarifa efectiva no
+	 * aparece en el catálogo, intenta primero el porcentaje del tax rate de WC
+	 * y luego cae al default (15%).
 	 *
 	 * @author Fabian Silva <fabian.silva@consulti.ec>
-	 * @version 1.0
+	 * @author Aurafact Team
+	 * @version 1.2.0
 	 *
 	 * @param \WC_Order_Item_Product $item  Item de la orden.
 	 * @param \WC_Order              $order Orden.
 	 *
-	 * @return array Con keys codigoImpuesto y codigoTarifa.
+	 * @return array Con keys codigoImpuesto, codigoTarifa, porcentaje (para
+	 *               manejo de "precios con IVA incluido").
 	 */
 	private function get_item_tax_info( $item, $order ) {
 		$taxes = $item->get_taxes();
 
-		// Por defecto: IVA 15% (código más común en Ecuador).
-		$default = array(
-			'codigoImpuesto' => '2',
-			'codigoTarifa'   => '4',
-		);
+		$effective_rate = $this->compute_effective_tax_rate( $item, $taxes );
 
-		// Si no hay taxes, determinar según configuración de WooCommerce.
-		if ( empty( $taxes['total'] ) || ! is_array( $taxes['total'] ) ) {
-			return $default;
+		// Si no se pudo calcular el %, intentar leer la tarifa declarada en WC.
+		if ( null === $effective_rate ) {
+			$effective_rate = $this->get_product_tax_rate( $item );
 		}
 
-		$tax_total = array_sum( array_map( 'floatval', $taxes['total'] ) );
+		// Si aún no hay % (producto sin clase), default 15% (tarifa general Ecuador).
+		if ( null === $effective_rate ) {
+			$effective_rate = 15.0;
+		}
 
-		// Si no hay impuesto, verificar si es 0%, exento o no objeto.
-		if ( $tax_total <= 0 ) {
-			$product = $item->get_product();
-			if ( $product ) {
-				$tax_class = $product->get_tax_class();
-				$tax_rates = \WC_Tax::get_rates_for_tax_class( $tax_class );
+		// Mapeo a través del SriMapper.
+		$mapping = SriMapper::map_percentage_to_sri( $effective_rate );
 
-				foreach ( $tax_rates as $rate ) {
-					if ( isset( $rate->rate ) ) {
-						$rate_percent = (float) $rate->rate;
-						if ( $rate_percent <= 0 ) {
-							return array(
-								'codigoImpuesto' => '2',
-								'codigoTarifa'   => '0', // IVA 0%.
-							);
-						}
-					}
-				}
-			}
-
-			// Fallback: exento.
-			return array(
-				'codigoImpuesto' => '2',
-				'codigoTarifa'   => '7', // Exento.
+		if ( null === $mapping ) {
+			// No hay mapeo válido: notificar al admin vía order note y bloquear emisión.
+			$order->add_order_note(
+				sprintf(
+					/* translators: %s: Porcentaje de impuesto sin mapeo SRI */
+					__( 'Aurafact: No se encontró código SRI para %.2f%%. Configura las clases de impuestos en WC o contacta a soporte.', 'aurafact-woocommerce' ),
+					$effective_rate
+				)
+			);
+			throw new \Exception(
+				sprintf(
+					'Aurafact: No SRI code for %.2f%% tax rate',
+					$effective_rate
+				)
 			);
 		}
 
-		// Determinar tarifa basada en el subtotal vs impuesto.
-		$subtotal = (float) $item->get_subtotal();
-		if ( $subtotal > 0 ) {
-			$effective_rate = ( $tax_total / $subtotal ) * 100;
+		return array(
+			'codigoImpuesto' => $mapping['codigo'],
+			'codigoTarifa'   => $mapping['codigoAuxiliar'],
+			'porcentaje'     => isset( $mapping['porcentaje'] ) ? (float) $mapping['porcentaje'] : 0.0,
+		);
+	}
 
-			if ( $effective_rate < 1 ) {
-				return array(
-					'codigoImpuesto' => '2',
-					'codigoTarifa'   => '0', // IVA 0%.
-				);
+	/**
+	 * Calcula la tasa efectiva de impuesto a partir de los totales del item.
+	 *
+	 * @param \WC_Order_Item_Product $item  Item.
+	 * @param array                  $taxes Resultado de {@see \WC_Order_Item::get_taxes()}.
+	 *
+	 * @return float|null Tasa efectiva (%). Null si no se puede calcular.
+	 */
+	private function compute_effective_tax_rate( $item, $taxes ) {
+		if ( empty( $taxes['total'] ) || ! is_array( $taxes['total'] ) ) {
+			return null;
+		}
+
+		$tax_total = array_sum( array_map( 'floatval', $taxes['total'] ) );
+		if ( $tax_total <= 0 ) {
+			return 0.0;
+		}
+
+		$subtotal = (float) $item->get_subtotal();
+		if ( $subtotal <= 0 ) {
+			return null;
+		}
+
+		return ( $tax_total / $subtotal ) * 100;
+	}
+
+	/**
+	 * Obtiene la tasa declarada en la configuración de WC para el producto del item.
+	 *
+	 * Útil cuando el item no tiene taxes aplicados (ej: aún no procesado) pero
+	 * la configuración de WC tiene una tarifa para la clase del producto.
+	 *
+	 * @param \WC_Order_Item_Product $item Item.
+	 *
+	 * @return float|null Tasa (%). Null si el producto no tiene clase.
+	 */
+	private function get_product_tax_rate( $item ) {
+		$product = $item->get_product();
+		if ( ! $product ) {
+			return null;
+		}
+
+		$tax_class = $product->get_tax_class();
+		$tax_rates = \WC_Tax::get_rates_for_tax_class( $tax_class );
+
+		foreach ( $tax_rates as $rate ) {
+			if ( isset( $rate->rate ) ) {
+				return (float) $rate->rate;
 			}
 		}
 
-		return $default; // IVA 15%.
+		return null;
 	}
 
 	/**
 	 * Obtiene la información de impuestos del envío.
 	 *
+	 * Usa el mismo flujo que los items: calcula el % efectivo y mapea a SRI.
+	 *
 	 * @author Fabian Silva <fabian.silva@consulti.ec>
-	 * @version 1.0
+	 * @author Aurafact Team
+	 * @version 1.2.0
 	 *
 	 * @param \WC_Order $order Orden.
 	 *
-	 * @return array Con keys codigoImpuesto y codigoTarifa.
+	 * @return array Con keys codigoImpuesto, codigoTarifa, porcentaje.
 	 */
 	private function get_shipping_tax_info( $order ) {
-		$shipping_tax = (float) $order->get_shipping_tax();
+		$shipping_tax  = (float) $order->get_shipping_tax();
+		$shipping_total = (float) $order->get_shipping_total();
 
-		if ( $shipping_tax <= 0 ) {
+		if ( $shipping_tax <= 0 || $shipping_total <= 0 ) {
 			return array(
 				'codigoImpuesto' => '2',
-				'codigoTarifa'   => '0', // IVA 0%.
+				'codigoTarifa'   => '0',
+				'porcentaje'     => 0.0,
+			);
+		}
+
+		$effective_rate = ( $shipping_tax / $shipping_total ) * 100;
+
+		$mapping = SriMapper::map_percentage_to_sri( $effective_rate );
+		if ( null === $mapping ) {
+			return array(
+				'codigoImpuesto' => '2',
+				'codigoTarifa'   => '4',
+				'porcentaje'     => 15.0,
 			);
 		}
 
 		return array(
-			'codigoImpuesto' => '2',
-			'codigoTarifa'   => '4', // IVA 15%.
+			'codigoImpuesto' => $mapping['codigo'],
+			'codigoTarifa'   => $mapping['codigoAuxiliar'],
+			'porcentaje'     => isset( $mapping['porcentaje'] ) ? (float) $mapping['porcentaje'] : 15.0,
 		);
 	}
 

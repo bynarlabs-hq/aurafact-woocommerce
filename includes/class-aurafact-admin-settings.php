@@ -72,6 +72,11 @@ class AdminSettings {
 		add_action( 'woocommerce_update_options_aurafact', array( $this, 'save_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
 		add_action( 'wp_ajax_aurafact_wc_test_connection', array( $this, 'ajax_test_connection' ) );
+		add_action( 'wp_ajax_aurafact_wc_clear_sri_cache', array( $this, 'ajax_clear_sri_cache' ) );
+		add_action( 'admin_init', array( __NAMESPACE__ . '\\TaxSetup', 'on_admin_init' ) );
+
+		// Invalidar cache del SriMapper cuando el admin guarda cambios de configuración.
+		add_action( 'woocommerce_update_options_aurafact', array( __NAMESPACE__ . '\\SriMapper', 'clear_cache' ) );
 	}
 
 	/**
@@ -197,6 +202,14 @@ class AdminSettings {
 				'default'  => 'format_only',
 			),
 			*/
+			'tax_auto_setup' => array(
+				'name'     => __( 'Auto-configurar impuestos al activar', 'aurafact-woocommerce' ),
+				'type'     => 'checkbox',
+				'desc'     => __( 'Crea automáticamente las clases "Estándar", "Tasa cero" y "Tasa reducida" en WC si no existen. Solo se ejecuta una vez.', 'aurafact-woocommerce' ),
+				'id'       => 'aurafact_wc_auto_setup_taxes',
+				'default'  => 'no',
+				'desc_tip' => true,
+			),
 			'debug_mode' => array(
 				'name'     => __( 'Depuración', 'aurafact-woocommerce' ),
 				'type'     => 'checkbox',
@@ -279,6 +292,16 @@ class AdminSettings {
 					</tr>
 				</tbody>
 			</table>
+			<p style="margin-top: 10px;">
+				<button
+					type="button"
+					id="aurafact-wc-clear-sri-cache"
+					class="button"
+				>
+					<?php esc_html_e( 'Limpiar cache de parámetros SRI', 'aurafact-woocommerce' ); ?>
+				</button>
+				<span id="aurafact-wc-clear-cache-result" style="margin-left: 10px;"></span>
+			</p>
 		</div>
 		<?php
 	}
@@ -435,13 +458,17 @@ class AdminSettings {
 			'aurafact-wc-admin',
 			'aurafactWcAdmin',
 			array(
-				'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
-				'nonce'    => wp_create_nonce( 'aurafact_wc_test_connection' ),
-				'i18n'     => array(
-					'testing'   => __( 'Probando conexión...', 'aurafact-woocommerce' ),
-					'success'   => __( 'Conexión exitosa', 'aurafact-woocommerce' ),
-					'error'     => __( 'Error de conexión', 'aurafact-woocommerce' ),
-					'noApiKey'  => __( 'No hay API Key configurada', 'aurafact-woocommerce' ),
+				'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+				'nonce'          => wp_create_nonce( 'aurafact_wc_test_connection' ),
+				'clearCacheNonce' => wp_create_nonce( 'aurafact_wc_clear_sri_cache' ),
+				'i18n'           => array(
+					'testing'       => __( 'Probando conexión...', 'aurafact-woocommerce' ),
+					'success'       => __( 'Conexión exitosa', 'aurafact-woocommerce' ),
+					'error'         => __( 'Error de conexión', 'aurafact-woocommerce' ),
+					'noApiKey'      => __( 'No hay API Key configurada', 'aurafact-woocommerce' ),
+					'clearing'      => __( 'Limpiando cache...', 'aurafact-woocommerce' ),
+					'cacheCleared'  => __( 'Cache limpiado', 'aurafact-woocommerce' ),
+					'cacheError'    => __( 'Error al limpiar cache', 'aurafact-woocommerce' ),
 				),
 			)
 		);
@@ -511,5 +538,32 @@ class AdminSettings {
 			$this->log( 'Error de conexión con Aurafact: ' . $error_message );
 			wp_send_json_error( array( 'message' => $error_message ) );
 		}
+	}
+
+	/**
+	 * Maneja la solicitud AJAX para limpiar el cache de parámetros SRI.
+	 *
+	 * Story 708: permite forzar recarga de parámetros SRI cuando el admin
+	 * sospecha que el cache está desactualizado.
+	 *
+	 * @author Aurafact Team
+	 * @version 1.2.0
+	 *
+	 * @return void
+	 */
+	public function ajax_clear_sri_cache() {
+		// Verificar nonce.
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'aurafact_wc_clear_sri_cache' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Error de seguridad. Recarga la página e intenta de nuevo.', 'aurafact-woocommerce' ) ) );
+		}
+
+		// Verificar capacidad.
+		if ( ! current_user_can( self::REQUIRED_CAPABILITY ) ) {
+			wp_send_json_error( array( 'message' => __( 'No tienes permisos para realizar esta acción.', 'aurafact-woocommerce' ) ) );
+		}
+
+		SriMapper::clear_cache();
+		$this->log( 'Cache de parámetros SRI limpiado por acción manual del admin.' );
+		wp_send_json_success( array( 'message' => __( 'Cache de parámetros SRI limpiado.', 'aurafact-woocommerce' ) ) );
 	}
 }
