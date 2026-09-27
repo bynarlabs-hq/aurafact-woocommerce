@@ -121,7 +121,7 @@ class TaxSetup {
 				continue;
 			}
 
-			$created = \WC_Tax::create_tax_class( array( 'name' => $name ) );
+			$created = self::create_tax_class_safe( $name );
 			if ( $created && ! is_wp_error( $created ) ) {
 				$result['created'][] = $name;
 			} else {
@@ -340,6 +340,73 @@ class TaxSetup {
 	 */
 	private static function is_wc_available() {
 		return class_exists( '\WC_Tax' ) && method_exists( '\WC_Tax', 'create_tax_class' );
+	}
+
+	/**
+	 * Crea una clase de impuesto tolerante a cambios de signature en WC.
+	 *
+	 * WC cambió el signature de {@see WC_Tax::create_tax_class()} entre versiones:
+	 * - WC 7.x-9.x: esperaba `array( 'name' => $name )` (param `array`).
+	 * - WC 10.x+: pasó a `string $name` directo (param `string`).
+	 *
+	 * Pasar el tipo incorrecto bajo PHP 8.x dispara un TypeError que internamente
+	 * se manifiesta como `preg_match(): Argument #2 ($subject) must be of type string, array given`
+	 * (WC sanitiza internamente con preg_match sobre el nombre).
+	 *
+	 * Este helper usa Reflection para detectar el signature esperado y llamar
+	 * correctamente con string o array según corresponda.
+	 *
+	 * @param string $name Nombre de la clase de impuesto.
+	 *
+	 * @return array|\WP_Error|false Resultado de WC.
+	 */
+	private static function create_tax_class_safe( $name ) {
+		$name = (string) $name;
+		if ( '' === $name ) {
+			return new \WP_Error( 'empty_name', 'El nombre de la clase no puede estar vacío.' );
+		}
+
+		if ( ! class_exists( '\WC_Tax' ) || ! method_exists( '\WC_Tax', 'create_tax_class' ) ) {
+			return new \WP_Error( 'no_wc_tax_class', 'WC_Tax no disponible.' );
+		}
+
+		try {
+			$reflection = new \ReflectionMethod( '\WC_Tax', 'create_tax_class' );
+			$params     = $reflection->getParameters();
+
+			if ( empty( $params ) ) {
+				return new \WP_Error( 'no_params', 'create_tax_class no acepta parámetros.' );
+			}
+
+			$param     = $params[0];
+			$type      = $param->getType();
+			$type_name = ( $type && method_exists( $type, 'getName' ) ) ? strtolower( $type->getName() ) : '';
+
+			// WC <= 9.x: type-hint 'array', pasamos array( 'name' => $name ).
+			if ( 'array' === $type_name ) {
+				return \WC_Tax::create_tax_class( array( 'name' => $name ) );
+			}
+
+			// WC >= 10.x: type-hint 'string', pasamos el nombre directo.
+			if ( 'string' === $type_name ) {
+				return \WC_Tax::create_tax_class( $name );
+			}
+
+			// Sin type-hint (WC 10.x actual): intentar string primero.
+			// Si PHP 8.x lanza TypeError por esperar array, el catch de abajo
+			// intenta con array como fallback.
+			return \WC_Tax::create_tax_class( $name );
+		} catch ( \Throwable $e ) {
+			// Fallback: si el type-hint no fue detectado correctamente y la
+			// llamada con string falla, intentar con array.
+			error_log( '[aurafact-woocommerce] create_tax_class_safe falló con string, intentando array: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			try {
+				return \WC_Tax::create_tax_class( array( 'name' => $name ) );
+			} catch ( \Throwable $e2 ) {
+				error_log( '[aurafact-woocommerce] create_tax_class_safe falló también con array: ' . $e2->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				return new \WP_Error( 'create_failed', $e2->getMessage() );
+			}
+		}
 	}
 
 	/**

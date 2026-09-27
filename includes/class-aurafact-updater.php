@@ -29,12 +29,12 @@ class Updater {
 	/**
 	 * URL del repositorio en GitHub.
 	 */
-	const GITHUB_REPO_URL = 'https://github.com/aurafact/aurafact-woocommerce';
+	const GITHUB_REPO_URL = 'https://github.com/bynarlabs-hq/aurafact-woocommerce';
 
 	/**
 	 * API de GitHub para releases.
 	 */
-	const GITHUB_API_URL = 'https://api.github.com/repos/aurafact/aurafact-woocommerce/releases';
+	const GITHUB_API_URL = 'https://api.github.com/repos/bynarlabs-hq/aurafact-woocommerce/releases';
 
 	/**
 	 * Intervalo de verificación en segundos (12 horas).

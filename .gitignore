@@ -1,0 +1,23 @@
+# Logs y backups
+*.log
+*.bak
+*.tmp
+
+# Credenciales
+.env
+.env.local
+.env.*.local
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+node_modules/
+vendor/
